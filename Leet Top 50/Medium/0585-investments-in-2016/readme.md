@@ -1,58 +1,107 @@
-````md
 # ⭐ 585. Investments in 2016
 
-## Problem
+> One of the most frequently asked SQL interview questions involving **GROUP BY**, **HAVING**, duplicate detection, and filtering unique records.
 
-Given an `Insurance` table, report the sum of all `tiv_2016` values for policyholders who satisfy both conditions:
+## Problem Overview
 
-- They have the same `tiv_2015` value as one or more other policyholders.
-- Their location `(lat, lon)` is unique.
+We need to calculate the total `tiv_2016` investment value for policyholders who satisfy **both** of the following conditions:
 
-Round the final result to two decimal places.
+1. Their `tiv_2015` value appears more than once in the table.
+2. Their location `(lat, lon)` is unique across all policyholders.
 
-> **Note:** This is one of the most frequently asked SQL interview questions because it tests grouping, filtering, duplicate detection, and composite uniqueness.
+The final answer must be rounded to **2 decimal places**.
 
-## Table Schema
+---
 
-| Column Name | Type | Description |
-|------------|------|-------------|
-| pid | int | Policy ID |
-| tiv_2015 | float | Total investment value in 2015 |
-| tiv_2016 | float | Total investment value in 2016 |
-| lat | float | Latitude |
-| lon | float | Longitude |
+## Intuition
 
-## Approach
+This problem is essentially asking us to identify rows that belong to the intersection of two groups:
 
-We need to filter rows using two separate conditions.
+### Group 1: Duplicate `tiv_2015`
 
-### Condition 1: Repeated `tiv_2015`
+Find all investment values from 2015 that occur multiple times.
 
-The policyholder must have a `tiv_2015` value that appears more than once.
+Example:
 
-```sql
-SELECT tiv_2015
-FROM Insurance
-GROUP BY tiv_2015
-HAVING COUNT(*) > 1
+| tiv_2015 | Count |
+| -------- | ----- |
+| 10       | 3     |
+| 20       | 1     |
+
+Only `10` qualifies.
+
+---
+
+### Group 2: Unique Locations
+
+Find locations that appear exactly once.
+
+Example:
+
+| lat | lon | Count |
+| --- | --- | ----- |
+| 10  | 10  | 1     |
+| 20  | 20  | 2     |
+| 40  | 40  | 1     |
+
+Only `(10,10)` and `(40,40)` qualify.
+
+---
+
+### Final Step
+
+Keep only rows that satisfy **both conditions**, then sum their `tiv_2016` values.
+
+---
+
+## Visual Walkthrough
+
+### Original Data
+
+| pid | tiv_2015 | tiv_2016 | lat | lon |
+| --- | -------- | -------- | --- | --- |
+| 1   | 10       | 5        | 10  | 10  |
+| 2   | 20       | 20       | 20  | 20  |
+| 3   | 10       | 30       | 20  | 20  |
+| 4   | 10       | 40       | 40  | 40  |
+
+### Duplicate `tiv_2015`
+
+Rows retained:
+
+| pid |
+| --- |
+| 1   |
+| 3   |
+| 4   |
+
+---
+
+### Unique Locations
+
+Rows retained:
+
+| pid |
+| --- |
+| 1   |
+| 4   |
+
+---
+
+### Intersection
+
+| pid | tiv_2016 |
+| --- | -------- |
+| 1   | 5        |
+| 4   | 40       |
+
+Result:
+
+```text
+5 + 40 = 45.00
 ```
 
-### Condition 2: Unique Location
-
-The `(lat, lon)` pair must appear exactly once.
-
-```sql
-SELECT lat, lon
-FROM Insurance
-GROUP BY lat, lon
-HAVING COUNT(*) = 1
-```
-
-After applying both filters, we calculate:
-
-```sql
-ROUND(SUM(tiv_2016), 2)
-```
+---
 
 ## SQL Solution
 
@@ -74,63 +123,89 @@ AND (lat, lon) IN (
 );
 ```
 
-## Explanation
+---
 
-Using the sample data:
+## Why This Solution Works
 
-| pid | tiv_2015 | tiv_2016 | lat | lon |
-|-----|----------|----------|-----|-----|
-| 1 | 10 | 5 | 10 | 10 |
-| 2 | 20 | 20 | 20 | 20 |
-| 3 | 10 | 30 | 20 | 20 |
-| 4 | 10 | 40 | 40 | 40 |
+### First Subquery
 
-### Step 1: Find repeated `tiv_2015`
-
-`tiv_2015 = 10` appears multiple times, so rows with this value pass the first condition.
-
-### Step 2: Find unique locations
-
-| Location | Count |
-|----------|-------|
-| (10, 10) | 1 |
-| (20, 20) | 2 |
-| (40, 40) | 1 |
-
-Only `(10, 10)` and `(40, 40)` are unique.
-
-### Step 3: Keep rows satisfying both conditions
-
-| pid | tiv_2016 |
-|-----|----------|
-| 1 | 5 |
-| 4 | 40 |
-
-### Step 4: Sum and round
-
-```text
-5 + 40 = 45.00
+```sql
+SELECT tiv_2015
+FROM Insurance
+GROUP BY tiv_2015
+HAVING COUNT(*) > 1
 ```
 
-## Complexity
+Returns only investment values that occur multiple times.
 
-- Time Complexity: `O(n)`
-- Space Complexity: `O(n)`
+---
 
-## Key Concepts
+### Second Subquery
 
-- `GROUP BY`
-- `HAVING`
-- Duplicate detection
-- Composite uniqueness using `(lat, lon)`
-- Aggregate function `SUM()`
-- Rounding using `ROUND()`
+```sql
+SELECT lat, lon
+FROM Insurance
+GROUP BY lat, lon
+HAVING COUNT(*) = 1
+```
 
-## Output
+Returns only unique locations.
 
-Returns the rounded sum of `tiv_2016` for policyholders whose `tiv_2015` is shared and whose location is unique.
+---
 
-## LeetCode Link
+### Main Query
 
-https://leetcode.com/problems/investments-in-2016/
-````
+A row is included only if:
+
+* Its `tiv_2015` belongs to the duplicate investment group.
+* Its `(lat, lon)` belongs to the unique location group.
+
+After filtering, we simply sum `tiv_2016`.
+
+---
+
+## Interview Takeaways
+
+This problem tests several SQL concepts simultaneously:
+
+✅ Aggregate Functions (`SUM`)
+✅ Duplicate Detection (`COUNT > 1`)
+✅ Unique Record Detection (`COUNT = 1`)
+✅ `GROUP BY` + `HAVING`
+✅ Composite Column Filtering `(lat, lon)`
+✅ Nested Subqueries
+
+Because it combines multiple filtering layers, it is a very common SQL interview question asked by product companies and data teams.
+
+---
+
+## Complexity Analysis
+
+| Operation                       | Complexity |
+| ------------------------------- | ---------- |
+| Duplicate `tiv_2015` grouping   | O(n)       |
+| Unique location grouping        | O(n)       |
+| Final filtering and aggregation | O(n)       |
+
+**Overall Time Complexity:** `O(n)`
+
+**Space Complexity:** `O(n)`
+
+---
+
+## Key Learning
+
+Whenever a SQL problem mentions:
+
+* "appears more than once"
+* "appears exactly once"
+* "unique combination of columns"
+
+think immediately about:
+
+```sql
+GROUP BY
+HAVING COUNT(*)
+```
+
+This pattern appears repeatedly across SQL interview questions.
