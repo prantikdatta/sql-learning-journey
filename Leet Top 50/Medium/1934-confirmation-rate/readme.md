@@ -138,9 +138,5 @@ Where `n` is the number of records in the `Confirmations` table.
 * COALESCE
 * ROUND
 
-## LeetCode Link
-
-https://leetcode.com/problems/confirmation-rate/
-
 ```
 ```
